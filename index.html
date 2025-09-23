@@ -374,10 +374,16 @@ try {
           if (d2 < bestDist2) { bestDist2 = d2; best = item; }
         }
         if (best && bestDist2 <= pickRadius * pickRadius) {
-          best.picked = !best.picked;
-          draw();
-          saveSharedDebounced();
-        }
+  // clicou numa bolinha
+  setSelected(best.x, best.y);
+  best.picked = !best.picked;
+  draw();
+  saveSharedDebounced();
+} else {
+  // clicou em qualquer ponto vazio do mapa
+  const world = screenToWorld(cx, cy);
+  setSelected(world.x, world.y);
+}
       });
 
       // =================== EXPORT / IMPORT ===================
