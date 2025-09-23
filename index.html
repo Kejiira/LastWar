@@ -37,7 +37,7 @@
         border: 2px solid #fff;
         box-shadow: 0 0 0 1px rgba(0,0,0,.2) inset;
       }
-      #coords { font: 12px/1.2 monospace; color: #333; }
+      #coords, selected { font: 12px/1.2 monospace; color: #333; }
       #canvas {
         width: 100vw; height: 100vh; display: block;
         background: #fafafa; cursor: default;
@@ -385,18 +385,6 @@ try {
   setSelected(world.x, world.y);
 }
       });
-
-      // =================== EXPORT / IMPORT ===================
-      function download(filename, text) {
-        const blob = new Blob([text], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url; a.download = filename; a.click();
-        URL.revokeObjectURL(url);
-      }
-      document.getElementById("exportJSON").onclick = () => {
-        download("baus.json", JSON.stringify(BAUS));
-      };
       document.getElementById("applyImport").onclick = () => {
         try {
           const txt = document.getElementById("importBox").value.trim();
