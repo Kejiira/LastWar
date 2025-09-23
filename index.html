@@ -198,7 +198,28 @@
         const y = GRID_SIZE - 1 - yInv;
         return { x, y };
       }
+let lastSelected = null;
 
+function setSelected(x, y) {
+  const xi = Math.max(0, Math.min(999, Math.round(x)));
+  const yi = Math.max(0, Math.min(999, Math.round(y)));
+  lastSelected = { x: xi, y: yi };
+  const sel = document.getElementById("selected");
+  if (sel) sel.textContent = `Selecionado: X: ${xi} , Y: ${yi}`;
+
+  // (opcional) persistir no navegador:
+  try { localStorage.setItem('lw_last_selected', JSON.stringify(lastSelected)); } catch {}
+}
+
+// (opcional) restaurar ao iniciar:
+try {
+  const savedSel = localStorage.getItem('lw_last_selected');
+  if (savedSel) {
+    const o = JSON.parse(savedSel);
+    if (Number.isFinite(o.x) && Number.isFinite(o.y)) setSelected(o.x, o.y);
+  }
+} catch {}
+      
       // >>> NOVO: grade com 7ª coluna/linha maiores
       function drawGrid() {
         const w = canvas.width, h = canvas.height;
