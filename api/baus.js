@@ -1,5 +1,5 @@
 // api/baus.js — Vercel (Node runtime)
-// Lê/grava baus_lastwar.json no seu repo via GitHub Contents API.
+// Lê/grava baus.json no seu repo via GitHub Contents API.
 
 module.exports = async (req, res) => {
   try {
