@@ -72,7 +72,7 @@
       <div class="row" id="coords">X: –, Y: –</div>
       <div class="row" id="selected">Selecionado: –</div>
       <div class="row" style="display:none" id="importPanel">
-        <textarea id="importBox" placeholder='Cole aqui um JSON no formato [{"x":123,"y":456,"lvl":3,"picked":false}, ...]'></textarea>
+        <textarea id="importBox" placeholder='Cole aqui um JSON no formato [{"x":123,"y":456,"level":3,"picked":false}, ...]'></textarea>
         <div style="text-align:right; margin-top:6px">
           <button id="applyImport">Aplicar</button>
         </div>
@@ -131,7 +131,7 @@
           if (Array.isArray(data) && data.length > 0) {
             BAUS = data.map(o => ({
               x: Number(o.x), y: Number(o.y),
-              lvl: Number(o.lvl ?? 1), picked: !!o.picked
+              level: Number(o.level ?? 1), picked: !!o.picked
             }));
           } else {
             console.warn('API vazia; mantendo BAUS local.');
@@ -265,7 +265,7 @@ try {
           if (!Number.isFinite(item.x) || !Number.isFinite(item.y)) continue;
           const { sx, sy } = worldToScreen(item.x, item.y);
           if (sx < -20 || sy < -20 || sx > canvas.width + 20 || sy > canvas.height + 20) continue;
-          const color = LEVEL_COLORS[item.lvl] || "#000";
+          const color = LEVEL_COLORS[item.level] || "#000";
 
           if (item.picked) {
             // X quando pego
@@ -337,7 +337,7 @@ try {
         }
         if (hoverItem) {
           canvas.style.cursor = "pointer";
-          tooltip.textContent = `Lvl ${hoverItem.lvl} — X:${hoverItem.x} Y:${hoverItem.y}`;
+          tooltip.textContent = `level ${hoverItem.level} — X:${hoverItem.x} Y:${hoverItem.y}`;
           tooltip.style.left = (e.clientX + 14) + "px";
           tooltip.style.top  = (e.clientY + 14) + "px";
           tooltip.style.display = "block";
@@ -392,11 +392,11 @@ try {
           const arr = JSON.parse(txt);
           if (!Array.isArray(arr)) throw new Error("JSON precisa ser um array");
           BAUS = arr
-            .filter(o => Number.isFinite(o.x) && Number.isFinite(o.y) && Number.isFinite(o.lvl))
+            .filter(o => Number.isFinite(o.x) && Number.isFinite(o.y) && Number.isFinite(o.level))
             .map(o => ({
               x: Math.max(0, Math.min(999, Math.round(+o.x))),
               y: Math.max(0, Math.min(999, Math.round(+o.y))),
-              lvl: Math.max(1, Math.min(7, Math.round(+o.lvl))),
+              level: Math.max(1, Math.min(7, Math.round(+o.level))),
               picked: !!o.picked
             }));
           draw();
@@ -413,7 +413,7 @@ try {
         d1.className = "swatch";
         d1.style.background = LEVEL_COLORS[i];
         const d2 = document.createElement("div");
-        d2.textContent = `Lvl ${i}`;
+        d2.textContent = `level ${i}`;
         legend.appendChild(d1);
         legend.appendChild(d2);
       }
