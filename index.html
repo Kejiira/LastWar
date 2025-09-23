@@ -399,6 +399,57 @@ try {
   setSelected(world.x, world.y);
 }
       });
+
+      function clampInt(v, min, max) {
+  v = Math.round(Number(v));
+  if (!Number.isFinite(v)) return null;
+  return Math.max(min, Math.min(max, v));
+}
+
+function markFoundByXY(x, y, createIfMissing = false) {
+  const xi = clampInt(x, 0, 999);
+  const yi = clampInt(y, 0, 999);
+  if (xi === null || yi === null) return { ok: false, msg: 'Coordenadas inválidas' };
+
+  // procura ponto exato
+  let item = BAUS.find(o => o.x === xi && o.y === yi);
+  if (!item && createIfMissing) {
+    // cria com lvl 1 por padrão (mude se quiser outro)
+    item = { x: xi, y: yi, lvl: 1, picked: true };
+    BAUS.push(item);
+  }
+  if (!item) return { ok: false, msg: `Não encontrado: X:${xi} Y:${yi}` };
+
+  item.picked = true; // marca como encontrada
+  return { ok: true, msg: `Marcado: X:${xi} Y:${yi}` };
+}
+
+// liga os inputs/botão
+(function wireMarkUI(){
+  const bx = document.getElementById('inpX');
+  const by = document.getElementById('inpY');
+  const btn = document.getElementById('btnMarcar');
+  const chk = document.getElementById('chkCriar');
+  const msg = document.getElementById('markMsg');
+  if (!bx || !by || !btn) return;
+
+  function doMark() {
+    const res = markFoundByXY(bx.value, by.value, !!(chk && chk.checked));
+    if (msg) msg.textContent = res.msg;
+    if (res.ok) {
+      // opcional: atualizar painel de coords fixo, se você estiver usando essa lógica
+      if (typeof setCoordsFixed === 'function') setCoordsFixed(bx.value, by.value);
+      draw();
+      saveSharedDebounced();
+    }
+  }
+
+  btn.addEventListener('click', doMark);
+  // Enter nos campos também dispara
+  [bx, by].forEach(el => el && el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') doMark();
+  }));
+})();
       document.getElementById("applyImport").onclick = () => {
         try {
           const txt = document.getElementById("importBox").value.trim();
