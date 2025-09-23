@@ -1,27 +1,38 @@
 [
   {
-    "x": 704,
-    "y": 977,
+    "x": 576,
+    "y": 797,
+    "lvl": 3,
+    "picked": false
+  },
+  {
+    "x": 120,
+    "y": 980,
+    "lvl": 7,
+    "picked": true
+  },
+  {
+    "x": 500,
+    "y": 500,
     "lvl": 1,
     "picked": true
   },
   {
-    "x": 431,
-    "y": 978,
-    "lvl": 1,
-    "picked": true
+    "x": 300,
+    "y": 700,
+    "lvl": 4,
+    "picked": false
   },
-  
   {
-    "x": 582,
-    "y": 224,
-    "lvl": 3,
-    "picked": true
+    "x": 820,
+    "y": 220,
+    "lvl": 2,
+    "picked": false
   },
-   {
-    "x": 582,
-    "y": 224,
-    "lvl": 3,
-    "picked": true
-  },
+  {
+    "x": 900,
+    "y": 900,
+    "lvl": 6,
+    "picked": false
+  }
 ]
