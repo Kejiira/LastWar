@@ -85,6 +85,19 @@
       </div>
     </div>
 
+    <div class="row">
+  <label class="small">Marcar encontrada por coordenada</label>
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+    <input id="inpX" type="number" min="0" max="999" placeholder="X">
+    <input id="inpY" type="number" min="0" max="999" placeholder="Y">
+  </div>
+  <div style="margin-top:6px; display:flex; align-items:center; gap:8px;">
+    <label class="small"><input id="chkCriar" type="checkbox"> criar se não existir</label>
+    <button id="btnMarcar">Marcar</button>
+  </div>
+  <div class="small" id="markMsg"></div>
+</div>
+
     <div id="tooltip"></div>
 
     <script>
