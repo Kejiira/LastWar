@@ -57,7 +57,7 @@ module.exports = async (req, res) => {
         method: 'PUT',
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: 'update: baus_lastwar.json',
+          message: 'update: baus.json',
           content: newContent,
           sha,
           branch
