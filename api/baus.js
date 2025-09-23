@@ -7,7 +7,7 @@ module.exports = async (req, res) => {
     const owner  = process.env.GITHUB_OWNER;     // ex.: "seu-usuario"
     const repo   = process.env.GITHUB_REPO;      // ex.: "seu-repo"
     const branch = process.env.GITHUB_BRANCH || 'main';
-    const path   = 'baus_lastwar.json';
+    const path   = 'baus.json';
 
     if (!token || !owner || !repo) {
       return res.status(500).json({ error: 'Defina GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO (e opcional GITHUB_BRANCH).' });
