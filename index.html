@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Mapa Grid Last War — 13×13 setores, 1000×1000 coords</title>
     <style>
-      html,
-      body {
+      html, body {
         margin: 0;
         height: 100%;
         overflow: hidden;
@@ -23,13 +22,8 @@
         box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
         max-width: 380px;
       }
-      #ui h3 {
-        margin: 0 0 6px 0;
-        font-size: 16px;
-      }
-      #ui .row {
-        margin: 6px 0;
-      }
+      #ui h3 { margin: 0 0 6px 0; font-size: 16px; }
+      #ui .row { margin: 6px 0; }
       #legend {
         margin-top: 20px;
         display: grid;
@@ -39,78 +33,48 @@
         font-size: 13px;
       }
       .swatch {
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
+        width: 14px; height: 14px; border-radius: 50%;
         border: 2px solid #fff;
-        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2) inset;
+        box-shadow: 0 0 0 1px rgba(0,0,0,.2) inset;
       }
-      #coords {
-        font: 12px/1.2 monospace;
-        color: #333;
-      }
+      #coords { font: 12px/1.2 monospace; color: #333; }
       #canvas {
-        width: 100vw;
-        height: 100vh;
-        display: block;
-        background: #fafafa;
-        cursor: default;
+        width: 100vw; height: 100vh; display: block;
+        background: #fafafa; cursor: default;
       }
-      button,
-      select,
-      input[type="checkbox"] {
-        font: inherit;
-      }
-      #importBox {
-        width: 100%;
-        height: 90px;
-      }
-      .small {
-        font-size: 12px;
-        color: #666;
-      }
+      button, select, input[type="checkbox"] { font: inherit; }
+      #importBox { width: 100%; height: 90px; }
+      .small { font-size: 12px; color: #666; }
       .kbd {
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        background: #f0f0f0;
-        padding: 1px 6px;
-        border-radius: 6px;
+        background: #f0f0f0; padding: 1px 6px; border-radius: 6px;
       }
       /* Tooltip flutuante */
       #tooltip {
-        position: fixed;
-        z-index: 20;
-        display: none;
-        padding: 6px 8px;
-        background: #111;
-        color: #fff;
-        border-radius: 8px;
-        font-size: 12px;
-        pointer-events: none;
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+        position: fixed; z-index: 20; display: none;
+        padding: 6px 8px; background: #111; color: #fff;
+        border-radius: 8px; font-size: 12px; pointer-events: none;
+        box-shadow: 0 6px 16px rgba(0,0,0,.25);
       }
     </style>
   </head>
   <body>
     <canvas id="canvas"></canvas>
+
     <div id="ui">
       <h3>Map Last War — Season 2</h3>
       <div class="row small">
-        Arraste para mover • Scroll para zoom <br/> 
-        Clique na localização para marca-la como: <span class="kbd">encontrada</span>. <br/> 
-        Passe o mouse para ver o 
-        <span class="kbd">Level</span> e as <span class="kbd">coordenadas</span>
+        Arraste para mover • Scroll para zoom <br/>
+        Clique na localização para marcá-la como <span class="kbd">encontrada</span>.<br/>
+        Passe o mouse para ver o <span class="kbd">Level</span> e as <span class="kbd">coordenadas</span>
       </div>
       <div class="row" id="coords">X: –, Y: –</div>
       <div class="row">
         <button id="exportJSON">Exportar JSON</button>
-        
       </div>
-      <div class="row" style="display: none" id="importPanel">
-        <textarea
-          id="importBox"
-          placeholder='Cole aqui um JSON no formato [{"x":123,"y":456,"lvl":3,"picked":false}, ...]'
-        ></textarea>
-        <div style="text-align: right; margin-top: 6px">
+      <div class="row" style="display:none" id="importPanel">
+        <textarea id="importBox" placeholder='Cole aqui um JSON no formato [{"x":123,"y":456,"lvl":3,"picked":false}, ...]'></textarea>
+        <div style="text-align:right; margin-top:6px">
           <button id="applyImport">Aplicar</button>
         </div>
       </div>
@@ -119,66 +83,87 @@
           <summary>Legenda (níveis)</summary>
           <div id="legend"></div>
         </details>
+      </div>
+    </div>
+
     <div id="tooltip"></div>
+
     <script>
       // =================== CONFIG ===================
       const GRID_SIZE = 1000; // X e Y variam de 0..999
       const MAJOR_CELLS = 13; // grade principal 13×13
+
+      // >>> NOVO: célula central maior (linha 7 e coluna 7)
+      const BIG_INDEX = 7;     // 7ª coluna/linha é maior (1..13)
+      const BIG_SCALE = 1.25;  // fator de aumento (ajuste 1.15 ~ 1.35)
+      function makeEdges(total = GRID_SIZE, cells = MAJOR_CELLS, bigIndex = BIG_INDEX, bigScale = BIG_SCALE) {
+        const avg = total / cells;
+        const big = Math.min(total, avg * bigScale);
+        const other = (total - big) / (cells - 1);
+        const widths = Array(cells).fill(other);
+        widths[bigIndex - 1] = big;
+        const edges = [0];
+        let acc = 0;
+        for (const w of widths) { acc += w; edges.push(acc); }
+        return edges; // 0..GRID_SIZE (length: cells+1)
+      }
+
       // Tamanho das bolinhas (raio em px)
       const RADIUS_MIN = 5;
       const RADIUS_MAX = 10;
       const RADIUS_SCALE = 0.9; // multiplica o scale para crescer com o zoom
+
       // Cores por nível (1..7)
       const LEVEL_COLORS = {
-        1: "#FF0000", // vermelho
-        2: "#43a047", // verde
-        3: "#1e88e5", // azul
-        4: "#fdd835", // amarelo
-        5: "#ab47bc", // roxo
-        6: "#ff7043", // laranja
-        7: "#26c6da", // ciano
+        1: "#FF0000", 2: "#43a047", 3: "#1e88e5",
+        4: "#fdd835", 5: "#ab47bc", 6: "#ff7043", 7: "#26c6da"
       };
 
       // Lista EXEMPLO — Substitua/adapte manualmente
       let BAUS = [
         { x: 576, y: 797, lvl: 3, picked: false },
         { x: 120, y: 980, lvl: 7, picked: false },
-        { x: 500, y: 500, lvl: 1, picked: true },
+        { x: 500, y: 500, lvl: 1, picked: true  },
         { x: 300, y: 700, lvl: 4, picked: false },
         { x: 820, y: 220, lvl: 2, picked: false },
-        { x: 900, y: 900, lvl: 6, picked: false },
+        { x: 900, y: 900, lvl: 6, picked: false }
       ];
 
       // == PROGRESSO COMPARTILHADO (via API) ==
-async function loadShared() {
-  try {
-    const r = await fetch('/api/baus');            // se o HTML estiver em outro domínio, troque por URL completa da Vercel
-    if (!r.ok) throw new Error('Falha ao carregar /api/baus');
-    const data = await r.json();
-    if (Array.isArray(data)) BAUS = data;
-  } catch (e) {
-    console.warn('Sem backend agora; usando BAUS local. Detalhe:', e);
-  }
-}
+      async function loadShared() {
+        try {
+          const r = await fetch('/api/baus');
+          if (!r.ok) throw new Error('Falha ao carregar /api/baus');
+          const data = await r.json();
+          if (Array.isArray(data) && data.length > 0) {
+            BAUS = data.map(o => ({
+              x: Number(o.x), y: Number(o.y),
+              lvl: Number(o.lvl ?? 1), picked: !!o.picked
+            }));
+          } else {
+            console.warn('API vazia; mantendo BAUS local.');
+          }
+        } catch (e) {
+          console.warn('Sem backend agora; usando BAUS local. Detalhe:', e);
+        }
+      }
 
-let _saveTimer = null;
-function saveSharedDebounced() {
-  clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(saveShared, 350);
-}
-
-async function saveShared() {
-  try {
-    await fetch('/api/baus', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(BAUS)
-    });
-  } catch (e) {
-    console.error('Falha ao salvar no backend:', e);
-  }
-}
-
+      let _saveTimer = null;
+      function saveSharedDebounced() {
+        clearTimeout(_saveTimer);
+        _saveTimer = setTimeout(saveShared, 350);
+      }
+      async function saveShared() {
+        try {
+          await fetch('/api/baus', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(BAUS)
+          });
+        } catch (e) {
+          console.error('Falha ao salvar no backend:', e);
+        }
+      }
 
       // =================== RENDERING ===================
       const canvas = document.getElementById("canvas");
@@ -205,21 +190,15 @@ async function saveShared() {
       }
       window.addEventListener("resize", resize);
 
-      // Viewport (pan/zoom). O eixo Y do jogo cresce para cima; na tela cresce para baixo.
+      // Viewport (pan/zoom). Eixo Y do jogo cresce para cima; na tela cresce p/ baixo.
       // Conversão: yTela = (GRID_SIZE - 1 - yJogo)
       let scale = 1; // px por unidade
-      let offsetX = 0,
-        offsetY = 0; // deslocamento em px do canto superior esquerdo do mundo
-      let isPanning = false,
-        startPan = { x: 0, y: 0 },
-        startOffset = { x: 0, y: 0 };
+      let offsetX = 0, offsetY = 0;
+      let isPanning = false, startPan = { x: 0, y: 0 }, startOffset = { x: 0, y: 0 };
 
       function worldToScreen(x, y) {
         const yInv = GRID_SIZE - 1 - y;
-        return {
-          sx: offsetX + x * scale,
-          sy: offsetY + yInv * scale,
-        };
+        return { sx: offsetX + x * scale, sy: offsetY + yInv * scale };
       }
       function screenToWorld(sx, sy) {
         const x = (sx - offsetX) / scale;
@@ -228,36 +207,38 @@ async function saveShared() {
         return { x, y };
       }
 
+      // >>> NOVO: grade com 7ª coluna/linha maiores
       function drawGrid() {
-        const w = canvas.width,
-          h = canvas.height;
+        const w = canvas.width, h = canvas.height;
         ctx.clearRect(0, 0, w, h);
+
         // fundo
         ctx.fillStyle = "#fafafa";
         ctx.fillRect(0, 0, w, h);
 
-        // área do grid (borda externa)
-        const left = offsetX,
-          top = offsetY,
-          size = GRID_SIZE * scale;
+        // borda externa do mundo
+        const left = offsetX, top = offsetY, size = GRID_SIZE * scale;
         ctx.strokeStyle = "#111";
         ctx.lineWidth = 1.5;
         ctx.strokeRect(left, top, size, size);
 
-        // grade 13×13 (linhas principais)
-        const step = GRID_SIZE / MAJOR_CELLS; // ~76.923
+        // bordas variáveis
+        const colEdges = makeEdges(GRID_SIZE, MAJOR_CELLS, BIG_INDEX, BIG_SCALE);
+        const rowEdges = makeEdges(GRID_SIZE, MAJOR_CELLS, BIG_INDEX, BIG_SCALE);
+
         ctx.strokeStyle = "#bdbdbd";
         ctx.lineWidth = 1.1;
         ctx.beginPath();
+
+        // linhas verticais
         for (let k = 1; k < MAJOR_CELLS; k++) {
-          const x = k * step;
-          const sx = offsetX + x * scale;
+          const sx = offsetX + colEdges[k] * scale;
           ctx.moveTo(sx, top);
           ctx.lineTo(sx, top + size);
         }
+        // linhas horizontais (medidas a partir do topo)
         for (let k = 1; k < MAJOR_CELLS; k++) {
-          const yInv = k * step; // coordenada de tela (invertida)
-          const sy = offsetY + yInv * scale;
+          const sy = offsetY + rowEdges[k] * scale;
           ctx.moveTo(left, sy);
           ctx.lineTo(left + size, sy);
         }
@@ -265,24 +246,15 @@ async function saveShared() {
       }
 
       function drawMarkers() {
-        const rBase = Math.max(
-          RADIUS_MIN,
-          Math.min(RADIUS_MAX, scale * RADIUS_SCALE)
-        );
+        const rBase = Math.max(RADIUS_MIN, Math.min(RADIUS_MAX, scale * RADIUS_SCALE));
         for (const item of BAUS) {
           if (!Number.isFinite(item.x) || !Number.isFinite(item.y)) continue;
           const { sx, sy } = worldToScreen(item.x, item.y);
-          if (
-            sx < -20 ||
-            sy < -20 ||
-            sx > canvas.width + 20 ||
-            sy > canvas.height + 20
-          )
-            continue;
+          if (sx < -20 || sy < -20 || sx > canvas.width + 20 || sy > canvas.height + 20) continue;
           const color = LEVEL_COLORS[item.lvl] || "#000";
 
           if (item.picked) {
-            // SOMENTE X quando pego
+            // X quando pego
             ctx.strokeStyle = color;
             ctx.lineWidth = Math.max(1, rBase * 0.6);
             ctx.beginPath();
@@ -304,14 +276,6 @@ async function saveShared() {
         }
       }
 
-      function withAlpha(hex, a) {
-        const bigint = parseInt(hex.slice(1), 16);
-        const r = (bigint >> 16) & 255,
-          g = (bigint >> 8) & 255,
-          b = bigint & 255;
-        return `rgba(${r},${g},${b},${a})`;
-      }
-
       function draw() {
         drawGrid();
         drawMarkers();
@@ -325,54 +289,43 @@ async function saveShared() {
         canvas.style.cursor = "grabbing";
         tooltip.style.display = "none";
       });
-
       window.addEventListener("mouseup", () => {
         isPanning = false;
         canvas.style.cursor = "default";
       });
-
       window.addEventListener("mousemove", (e) => {
         if (isPanning) {
           offsetX = startOffset.x + (e.clientX - startPan.x);
           offsetY = startOffset.y + (e.clientY - startPan.y);
           draw();
-          return; // durante pan, não faz hover
+          return;
         }
-
         const rect = canvas.getBoundingClientRect();
-        const cx = e.clientX - rect.left,
-          cy = e.clientY - rect.top;
+        const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
 
         // Atualizar X,Y na UI
         const { x, y } = screenToWorld(cx, cy);
-        const xi = Math.floor(x),
-          yi = Math.floor(y);
+        const xi = Math.floor(x), yi = Math.floor(y);
         const c = document.getElementById("coords");
-        if (c)
-          c.textContent =
-            xi >= 0 && xi < GRID_SIZE && yi >= 0 && yi < GRID_SIZE
-              ? `X: ${xi} , Y: ${yi}`
-              : "X: –, Y: –";
+        if (c) c.textContent = (xi >= 0 && xi < GRID_SIZE && yi >= 0 && yi < GRID_SIZE)
+          ? `X: ${xi} , Y: ${yi}` : "X: –, Y: –";
 
-        // Hover → pointer quando perto de uma bolinha e mostrar tooltip
+        // Hover → pointer + tooltip
         const HOVER_RADIUS = Math.max(10, Math.min(16, scale * 1.5));
-        let hoverItem = null,
-          bestD2 = Infinity;
+        let hoverItem = null, bestD2 = Infinity;
         for (const item of BAUS) {
           const { sx, sy } = worldToScreen(item.x, item.y);
-          const dx = sx - cx,
-            dy = sy - cy;
-          const d2 = dx * dx + dy * dy;
-          if (d2 <= HOVER_RADIUS * HOVER_RADIUS && d2 < bestD2) {
-            hoverItem = item;
-            bestD2 = d2;
+          const dx = sx - cx, dy = sy - cy;
+          const d2 = dx*dx + dy*dy;
+          if (d2 <= HOVER_RADIUS*HOVER_RADIUS && d2 < bestD2) {
+            hoverItem = item; bestD2 = d2;
           }
         }
         if (hoverItem) {
           canvas.style.cursor = "pointer";
           tooltip.textContent = `Lvl ${hoverItem.lvl} — X:${hoverItem.x} Y:${hoverItem.y}`;
-          tooltip.style.left = e.clientX + 14 + "px";
-          tooltip.style.top = e.clientY + 14 + "px";
+          tooltip.style.left = (e.clientX + 14) + "px";
+          tooltip.style.top  = (e.clientY + 14) + "px";
           tooltip.style.display = "block";
         } else {
           canvas.style.cursor = "default";
@@ -380,42 +333,32 @@ async function saveShared() {
         }
       });
 
-      canvas.addEventListener(
-        "wheel",
-        (e) => {
-          e.preventDefault();
-          tooltip.style.display = "none";
-          const rect = canvas.getBoundingClientRect();
-          const mx = e.clientX - rect.left;
-          const my = e.clientY - rect.top;
-          const before = screenToWorld(mx, my);
-          const factor = Math.exp(-e.deltaY * 0.0015);
-          const newScale = Math.max(0.2, Math.min(40, scale * factor));
-          scale = newScale;
-          offsetX = mx - before.x * scale;
-          offsetY = my - (GRID_SIZE - 1 - before.y) * scale;
-          draw();
-        },
-        { passive: false }
-      );
+      canvas.addEventListener("wheel", (e) => {
+        e.preventDefault();
+        tooltip.style.display = "none";
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const before = screenToWorld(mx, my);
+        const factor = Math.exp(-e.deltaY * 0.0015);
+        const newScale = Math.max(0.2, Math.min(40, scale * factor));
+        scale = newScale;
+        offsetX = mx - before.x * scale;
+        offsetY = my - (GRID_SIZE - 1 - before.y) * scale;
+        draw();
+      }, { passive: false });
 
       // clique: alterna estado do marcador mais próximo se o clique estiver próximo
       canvas.addEventListener("click", (e) => {
         const rect = canvas.getBoundingClientRect();
-        const cx = e.clientX - rect.left,
-          cy = e.clientY - rect.top;
-        let best = null,
-          bestDist2 = Infinity;
+        const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+        let best = null, bestDist2 = Infinity;
         const pickRadius = Math.max(10, Math.min(18, scale * 1.8)); // px
         for (const item of BAUS) {
           const { sx, sy } = worldToScreen(item.x, item.y);
-          const dx = sx - cx,
-            dy = sy - cy;
-          const d2 = dx * dx + dy * dy;
-          if (d2 < bestDist2) {
-            bestDist2 = d2;
-            best = item;
-          }
+          const dx = sx - cx, dy = sy - cy;
+          const d2 = dx*dx + dy*dy;
+          if (d2 < bestDist2) { bestDist2 = d2; best = item; }
         }
         if (best && bestDist2 <= pickRadius * pickRadius) {
           best.picked = !best.picked;
@@ -429,35 +372,27 @@ async function saveShared() {
         const blob = new Blob([text], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        a.click();
+        a.href = url; a.download = filename; a.click();
         URL.revokeObjectURL(url);
       }
-
       document.getElementById("exportJSON").onclick = () => {
         download("baus.json", JSON.stringify(BAUS));
       };
-
       document.getElementById("applyImport").onclick = () => {
         try {
           const txt = document.getElementById("importBox").value.trim();
           const arr = JSON.parse(txt);
           if (!Array.isArray(arr)) throw new Error("JSON precisa ser um array");
           BAUS = arr
-            .filter(
-              (o) =>
-                Number.isFinite(o.x) &&
-                Number.isFinite(o.y) &&
-                Number.isFinite(o.lvl)
-            )
-            .map((o) => ({
+            .filter(o => Number.isFinite(o.x) && Number.isFinite(o.y) && Number.isFinite(o.lvl))
+            .map(o => ({
               x: Math.max(0, Math.min(999, Math.round(+o.x))),
               y: Math.max(0, Math.min(999, Math.round(+o.y))),
               lvl: Math.max(1, Math.min(7, Math.round(+o.lvl))),
-              picked: !!o.picked,
+              picked: !!o.picked
             }));
           draw();
+          saveShared(); // opcional: grava no backend após importar
         } catch (err) {
           alert("Erro ao importar: " + err.message);
         }
@@ -477,8 +412,7 @@ async function saveShared() {
 
       // init
       fitInitial();
-loadShared().then(draw).catch(draw);
-
+      loadShared().then(draw).catch(draw);
     </script>
   </body>
 </html>
