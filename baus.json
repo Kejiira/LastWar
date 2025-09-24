@@ -2109,7 +2109,7 @@
     "x": 1,
     "y": 601,
     "level": 1,
-    "picked": false
+    "picked": true
   },
   {
     "x": 48,
@@ -2601,7 +2601,7 @@
     "x": 311,
     "y": 709,
     "level": 4,
-    "picked": true
+    "picked": false
   },
   {
     "x": 290,
