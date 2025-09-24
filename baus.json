@@ -5889,7 +5889,7 @@
     "x": 666,
     "y": 101,
     "level": 2,
-    "picked": true
+    "picked": false
   },
   {
     "x": 641,
